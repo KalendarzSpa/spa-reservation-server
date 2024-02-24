@@ -1,28 +1,42 @@
-// server.js
 const express = require('express');
-const bodyParser = require('body-parser');
-const cors = require('cors');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(bodyParser.json());
+mongoose.connect('mongodb://localhost:27017/spa_reservation', { useNewUrlParser: true, useUnifiedTopology: true });
 
-let reservations = [];
-let userIdCounter = 1;
-
-app.get('/reservations', (req, res) => {
-    res.json(reservations);
+const reservationSchema = new mongoose.Schema({
+    userId: String,
+    date: String,
+    timeSlotId: String,
+    roomNumber: String,
 });
 
-app.post('/reservations', (req, res) => {
-    const newReservation = req.body;
-    newReservation.userId = userIdCounter++;
-    reservations.push(newReservation);
-    res.json({ userId: newReservation.userId });
+const Reservation = mongoose.model('Reservation', reservationSchema);
+
+app.use(express.json());
+
+app.post('/api/reservations', async (req, res) => {
+    try {
+        const reservation = new Reservation(req.body);
+        await reservation.save();
+        res.status(201).send(reservation);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+app.get('/api/reservations', async (req, res) => {
+    try {
+        const reservations = await Reservation.find();
+        res.send(reservations);
+    } catch (error) {
+        res.status(500).send(error);
+    }
 });
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
